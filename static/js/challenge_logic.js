@@ -1,45 +1,47 @@
 // We create the streets tile layer that will be the background of our map.
 let streets = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery (c) <a href="https://www.mapbox.com/">Mapbox</a>',
+    attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery (c) <a href="https://www.mapbox.com/">Mapbox</a>',
     maxZoom: 18,
     accessToken: API_KEY
 });
 
 // We create the satallite view tile layer that will be an option for our map.
-let satallite = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v11/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery (c) <a href="https://www.mapbox.com/">Mapbox</a>',
+let satellite = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v11/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+    attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery (c) <a href="https://www.mapbox.com/">Mapbox</a>',
     maxZoom: 18,
     accessToken: API_KEY
 });
 
 // We create the satallite view tile layer that will be an option for our map.
 let dark = L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/navigation-night-v1/tiles/{z}/{x}/{y}?access_token={accessToken}', {
-attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery (c) <a href="https://www.mapbox.com/">Mapbox</a>',
+    attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery (c) <a href="https://www.mapbox.com/">Mapbox</a>',
     maxZoom: 18,
     accessToken: API_KEY
+});
+
+// Create the map object with center, zoom level and default layer.
+let map = L.map('mapid', {
+    center: [40.7, -94.5],
+    zoom: 3,
+    layers: [streets]
 });
 
 // Create a base layer that holds both maps.
 let baseMaps = {
     "Streets": streets,
-    "Satallite": satallite,
+    "Satellite": satellite,
     "Dark": dark
 };
 
 // Create the earthquake layer for our map.
-let earthquakes = new L.layerGroup();
+let allEarthquakes = new L.layerGroup();
+let tectonicPlates = new L.layerGroup();
 
 // We define an object that contains the overlays. This overlay will be visible all the time.
 let overlays = {
-    Earthquakes: earthquakes
+    "Earthquakes": allEarthquakes,
+    "Tectonic Plates": tectonicPlates
 };
-
-// Create the map object with center, zoom level and default layer.
-let map = L.map('mapid', {
-    center: [39.5, -98.5],
-    zoom: 3,
-    layers: [streets]
-});
 
 // Then we add a control to the map that will allow the user to change which layers are visible.
 L.control.layers(baseMaps, overlays).addTo(map);
@@ -84,7 +86,6 @@ d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geoj
     // This function determines the radius of the earthquake marker based on its magnitude. Earthquakes with a 
     // magnitude of 0 will be plotted with a radius of 1.
     function getRadius(magnitude) {
-        console.log(magnitude);
         if (magnitude === 0) {
             return 1;
         };
@@ -96,6 +97,7 @@ d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geoj
 
         // We turn each feature into a circleMarker on the map.
         pointToLayer: function(feature, latlng) {
+            console.log(data);
             return L.circleMarker(latlng);
         },
 
@@ -107,10 +109,10 @@ d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geoj
         onEachFeature: function(feature, layer) {
             layer.bindPopup("Magnitude: " + feature.properties.mag + "<br>Location: " + feature.properties.place);
         }
-    }).addTo(earthquakes);
+    }).addTo(allEarthquakes);
 
     // Then we add the earthquake layer to our map.
-    earthquakes.addTo(map);
+    allEarthquakes.addTo(map);
 
     // Create a legend control object.
     let legend = L.control({
@@ -142,5 +144,23 @@ d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geoj
         return div;
     };
 
+    // Finally, we add our legend to the map.
     legend.addTo(map);
+
+    // Use d3.json to make a call to get our Tectonic Plate geoJSON data.
+    d3.json("https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json").then(function(data2) {
+        // Define style for tectonic lines.
+        let styleInfo2 = {
+            color: "#b34100",
+            weight: 2
+        };
+
+        console.log(data2);
+    
+        L.geoJson(data2, {
+            style: styleInfo2
+        }).addTo(tectonicPlates);
+
+        tectonicPlates.addTo(map);
+    });
 });
